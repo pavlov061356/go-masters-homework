@@ -2,6 +2,7 @@ package cron
 
 import (
 	"os"
+	"slices"
 	"sync"
 	"time"
 
@@ -11,7 +12,7 @@ import (
 
 var (
 	mux   sync.Mutex
-	tasks map[Task]struct{} = make(map[Task]struct{})
+	tasks []Task
 )
 
 type Task interface {
@@ -35,7 +36,7 @@ func Add(task Task, t time.Time) {
 
 	mux.Lock()
 	defer mux.Unlock()
-	tasks[task] = struct{}{}
+	tasks = append(tasks, task)
 	go runTask(task, t)
 }
 
@@ -47,6 +48,9 @@ func runTask(task Task, startTime time.Time) {
 	task.Exec()
 
 	mux.Lock()
-	delete(tasks, task)
+	taskIndex := slices.Index(tasks, task)
+	if taskIndex != -1 {
+		tasks = slices.Delete(tasks, taskIndex, taskIndex+1)
+	}
 	mux.Unlock()
 }
