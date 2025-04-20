@@ -2,7 +2,7 @@ package errs
 
 import (
 	"fmt"
-	"math/rand"
+	"math/rand/v2"
 )
 
 type ErrNotFound struct{}
@@ -36,7 +36,7 @@ func (e *ErrInternalServerError) Error() string {
 // RandomErr возвращает случайную ошибку
 // Вспомогательная функция для примера
 func RandomErr() error {
-	number := rand.Intn(4)
+	number := rand.IntN(4)
 
 	switch number {
 	case 0:
