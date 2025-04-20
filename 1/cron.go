@@ -35,8 +35,8 @@ func Add(task Task, t time.Time) {
 	}
 
 	mux.Lock()
-	defer mux.Unlock()
 	tasks = append(tasks, task)
+	mux.Unlock()
 	go runTask(task, t)
 }
 
