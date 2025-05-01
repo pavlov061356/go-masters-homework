@@ -6,31 +6,26 @@ import (
 	"time"
 )
 
+const (
+	cacheCleanPeriod = 10 * time.Second
+)
+
 type cacheEntity[T any] struct {
 	data T
 	time time.Time
 }
 
-func newCacheEntity[T any](data T, ttl time.Duration) cacheEntity[T] {
-	return cacheEntity[T]{
-		data: data,
-		time: time.Now().Add(ttl),
-	}
-}
-
-type Cache[K comparable, T any] struct {
+type Cache[K comparable, V any] struct {
 	ctx context.Context
-	ttl time.Duration
 
 	mux  sync.Mutex
-	data map[K]cacheEntity[T]
+	data map[K]cacheEntity[V]
 }
 
-func New[K comparable, T any](ctx context.Context, ttl time.Duration) *Cache[K, T] {
-	cache := &Cache[K, T]{
-		data: make(map[K]cacheEntity[T]),
+func New[K comparable, V any](ctx context.Context) *Cache[K, V] {
+	cache := &Cache[K, V]{
+		data: make(map[K]cacheEntity[V]),
 		ctx:  ctx,
-		ttl:  ttl,
 	}
 
 	go cache.cleanCache()
@@ -38,31 +33,39 @@ func New[K comparable, T any](ctx context.Context, ttl time.Duration) *Cache[K, 
 	return cache
 }
 
-func (c *Cache[K, T]) Get(k K) (T, bool) {
+func (c *Cache[K, V]) Get(k K) (V, bool) {
 	c.mux.Lock()
 	defer c.mux.Unlock()
+
+	var val V
 
 	cacheEntity, ok := c.data[k]
 	if !ok {
-		return cacheEntity.data, false
+		return val, false
 	}
 
-	cacheEntity.time = time.Now().Add(c.ttl)
-	c.data[k] = cacheEntity
+	if cacheEntity.time.Before(time.Now()) {
+		return val, false
+	}
 
-	return cacheEntity.data, true
+	val = cacheEntity.data
+
+	return val, true
 }
 
-func (c *Cache[K, T]) Set(k K, v T) {
+func (c *Cache[K, V]) Set(k K, v V, ttl time.Duration) {
 	c.mux.Lock()
 	defer c.mux.Unlock()
-	c.data[k] = newCacheEntity(v, c.ttl)
+	c.data[k] = cacheEntity[V]{
+		data: v,
+		time: time.Now().Add(ttl),
+	}
 }
 
 // cleanCache инвалидирует данные в кеше, если они устарели
 // Работает по схеме crawler
 func (c *Cache[K, T]) cleanCache() {
-	ticker := time.NewTicker(c.ttl / 2)
+	ticker := time.NewTicker(cacheCleanPeriod)
 	defer ticker.Stop()
 
 	for {
