@@ -15,7 +15,7 @@ func Test(t *testing.T) {
 	ctx := context.Background()
 	ctx, cancel := context.WithTimeout(ctx, time.Second*90)
 	p := NewWebParser()
-	parser := New(time.Second, 3, p)
+	parser := New(time.Second, 2, p)
 	urls := parser.Parse(ctx, "https://go.dev/")
 	defer cancel()
 	t.Logf("len(urls): %d", len(urls))

@@ -164,8 +164,10 @@ func (p *URLParser) Parse(ctx context.Context, url string) (urls []string) {
 
 	parsedUrlsMux.Lock()
 	urls = make([]string, len(parsedUrls))
+	i := 0
 	for k := range parsedUrls {
-		urls = append(urls, k)
+		urls[i] = k
+		i++
 	}
 	parsedUrlsMux.Unlock()
 	return
