@@ -46,12 +46,15 @@ func New(timeout time.Duration, maxDepth int, parser Parser) *URLParser {
 
 func (p *URLParser) Parse(ctx context.Context, url string) (urls []string) {
 	parsedUrlsChan := make(chan []string)
-	parsedUrlsMux := sync.Mutex{}
+
+	var parsedUrlsMux sync.Mutex
+	// Коллекция уникальных url, чтобы не парсить повторно ссылки
 	parsedUrls := map[string]struct{}{}
 
 	var wg sync.WaitGroup
 
 	crawlRequestMux := sync.Mutex{}
+	// Список ссылок для обработки
 	crawlRequests := []crawlRequest{
 		{
 			url:   url,
@@ -60,9 +63,14 @@ func (p *URLParser) Parse(ctx context.Context, url string) (urls []string) {
 	}
 
 	numWorkers := runtime.NumCPU()
+	workerStatesMux := sync.Mutex{}
+	// Состояние рабочих потоков, для определения когда все они завершили работу
+	workerStates := make([]bool, numWorkers)
 	for i := range numWorkers {
+		workerStates[i] = false
 		wg.Add(1)
 		go func() {
+			defer log.Info().Msgf("Worker %d; Exited", i)
 			defer wg.Done()
 			for {
 				select {
@@ -70,16 +78,40 @@ func (p *URLParser) Parse(ctx context.Context, url string) (urls []string) {
 					return
 				default:
 					crawlRequestMux.Lock()
+					// Если нет ссылок для обработки, то проверяется статус всех остальных потоков,
+					// если все работу не завершили, то ждём и переходим к следующему шагу цикла,
+					// иначе завершаем работу этого потока
 					if len(crawlRequests) == 0 {
 						crawlRequestMux.Unlock()
-						return
+
+						time.Sleep(time.Millisecond * 100)
+						workerStatesMux.Lock()
+						workerStates[i] = false
+
+						var hasRunningWorkers bool
+						for _, state := range workerStates {
+							hasRunningWorkers = hasRunningWorkers || state
+						}
+						workerStatesMux.Unlock()
+
+						if !hasRunningWorkers {
+							return
+						}
+						continue
 					}
+					// Если есть ссылки для обработки, то берем первую из них и удаляем из списка
 					currentRequest := crawlRequests[0]
 					crawlRequests = crawlRequests[1:]
 					crawlRequestMux.Unlock()
 
+					// Если максимальная глубина обхода не достигнута, то начинаем обработку ссылки
 					if p.maxDepth == 0 || (p.maxDepth != 0 && currentRequest.depth <= p.maxDepth) {
-						log.Info().Msgf("Worker %d; Crawling url: %v", i, currentRequest)
+
+						// Помечаем рабочий поток как активный
+						workerStatesMux.Lock()
+						workerStates[i] = true
+						workerStatesMux.Unlock()
+
 						parserCtx, cancel := context.WithTimeout(ctx, p.timeout)
 						parsed, err := p.parser.Parse(parserCtx, currentRequest.url)
 						cancel()
@@ -88,9 +120,11 @@ func (p *URLParser) Parse(ctx context.Context, url string) (urls []string) {
 							continue
 						}
 
+						// tasks -- список ссылок для обработки, которые еще не были обработаны
 						var tasks []string
 						parsedUrlsMux.Lock()
 						for _, url := range parsed {
+							// Если ссылка не была обработана ранее, то добавляем ее в список ссылок для обработки
 							if _, ok := parsedUrls[url]; !ok {
 								crawlRequestMux.Lock()
 								crawlRequests = append(crawlRequests, crawlRequest{
@@ -105,8 +139,6 @@ func (p *URLParser) Parse(ctx context.Context, url string) (urls []string) {
 						if len(tasks) > 0 {
 							parsedUrlsChan <- tasks
 						}
-					} else {
-						continue
 					}
 				}
 			}
@@ -116,13 +148,11 @@ func (p *URLParser) Parse(ctx context.Context, url string) (urls []string) {
 	parsingComplete := make(chan struct{})
 	go func() {
 		for parsed := range parsedUrlsChan {
+			parsedUrlsMux.Lock()
 			for _, url := range parsed {
-				parsedUrlsMux.Lock()
-				if _, ok := parsedUrls[url]; !ok {
-					parsedUrls[url] = struct{}{}
-				}
-				parsedUrlsMux.Unlock()
+				parsedUrls[url] = struct{}{}
 			}
+			parsedUrlsMux.Unlock()
 		}
 		close(parsingComplete)
 	}()

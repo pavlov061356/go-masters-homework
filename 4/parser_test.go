@@ -13,12 +13,12 @@ import (
 
 func Test(t *testing.T) {
 	ctx := context.Background()
-	ctx, cancel := context.WithTimeout(ctx, time.Second*30)
+	ctx, cancel := context.WithTimeout(ctx, time.Second*90)
 	p := NewWebParser()
-	parser := New(time.Second, 0, p)
+	parser := New(time.Second, 3, p)
 	urls := parser.Parse(ctx, "https://go.dev/")
 	defer cancel()
-	t.Log(urls)
+	t.Logf("len(urls): %d", len(urls))
 }
 
 // WebParser реализует интерфейс Parser для веб-страниц.
