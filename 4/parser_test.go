@@ -15,22 +15,9 @@ func TestURLParser(t *testing.T) {
 	ctx := context.Background()
 	ctx, cancel := context.WithTimeout(ctx, time.Second*90)
 	p := NewWebParser()
-	parser := New(time.Second, 1, p)
+	parser := New(p, 2*time.Second, 2)
 	urls := parser.Parse(ctx, "https://go.dev/")
 	defer cancel()
-	t.Logf("len(urls): %d", len(urls))
-}
-
-func TestURLParserSema(t *testing.T) {
-	ctx := context.Background()
-	ctx, cancel := context.WithTimeout(ctx, time.Second*90)
-	p := NewWebParser()
-	parser := NewCrawler(p, time.Second, 3)
-	urls, err := parser.Crawl(ctx, "https://go.dev/")
-	defer cancel()
-	if err != nil {
-		t.Errorf("Ошибка при парсинге: %v", err)
-	}
 	t.Logf("len(urls): %d", len(urls))
 }
 
