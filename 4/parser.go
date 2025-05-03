@@ -172,3 +172,72 @@ func (p *URLParser) Parse(ctx context.Context, url string) (urls []string) {
 	parsedUrlsMux.Unlock()
 	return
 }
+
+type Crawler struct {
+	parser   Parser
+	timeout  time.Duration
+	maxDepth int
+}
+
+func NewCrawler(parser Parser, timeout time.Duration, maxDepth int) *Crawler {
+	return &Crawler{
+		parser:   parser,
+		timeout:  timeout,
+		maxDepth: maxDepth,
+	}
+}
+
+func (c *Crawler) Crawl(ctx context.Context, startURL string) ([]string, error) {
+	var (
+		results []string
+		visited sync.Map
+		mu      sync.Mutex
+		wg      sync.WaitGroup
+		sema    = make(chan struct{}, runtime.NumCPU())
+	)
+
+	// Define recursive crawl function
+	var crawl func(context.Context, string, int)
+	crawl = func(ctx context.Context, currentURL string, depth int) {
+		defer wg.Done()
+
+		if c.maxDepth > 0 && depth > c.maxDepth {
+			return
+		}
+
+		if _, loaded := visited.LoadOrStore(currentURL, struct{}{}); loaded {
+			return
+		}
+
+		select {
+		case <-ctx.Done():
+			return
+		case sema <- struct{}{}:
+			defer func() { <-sema }()
+		}
+
+		reqCtx, cancel := context.WithTimeout(ctx, c.timeout)
+		defer cancel()
+
+		urls, err := c.parser.Parse(reqCtx, currentURL)
+		if err != nil {
+			log.Error().Msgf("Failed to parse url: %v", err)
+			return
+		}
+
+		for _, u := range urls {
+			mu.Lock()
+			results = append(results, u)
+			mu.Unlock()
+			wg.Add(1)
+			go crawl(ctx, u, depth+1)
+		}
+	}
+
+	wg.Add(1)
+	go crawl(ctx, startURL, 0)
+
+	wg.Wait()
+
+	return results, nil
+}

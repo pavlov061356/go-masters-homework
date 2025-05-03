@@ -11,13 +11,26 @@ import (
 	"github.com/PuerkitoBio/goquery"
 )
 
-func Test(t *testing.T) {
+func TestURLParser(t *testing.T) {
 	ctx := context.Background()
 	ctx, cancel := context.WithTimeout(ctx, time.Second*90)
 	p := NewWebParser()
-	parser := New(time.Second, 2, p)
+	parser := New(time.Second, 1, p)
 	urls := parser.Parse(ctx, "https://go.dev/")
 	defer cancel()
+	t.Logf("len(urls): %d", len(urls))
+}
+
+func TestURLParserSema(t *testing.T) {
+	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(ctx, time.Second*90)
+	p := NewWebParser()
+	parser := NewCrawler(p, time.Second, 3)
+	urls, err := parser.Crawl(ctx, "https://go.dev/")
+	defer cancel()
+	if err != nil {
+		t.Errorf("Ошибка при парсинге: %v", err)
+	}
 	t.Logf("len(urls): %d", len(urls))
 }
 
