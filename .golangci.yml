@@ -23,10 +23,8 @@ linters:
     - gosmopolitan
     - misspell
     - nilerr
-    - testpackage
     - wastedassign
     - whitespace
-    - wrapcheck
     - wsl
     - zerologlint
   exclusions:
@@ -53,7 +51,6 @@ linters:
 formatters:
   enable:
     - gofmt
-    - gofumpt
     - goimports
   exclusions:
     generated: lax
