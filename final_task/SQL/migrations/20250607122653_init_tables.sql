@@ -1,3 +1,7 @@
+-- +goose Up
+-- +goose StatementBegin
+SELECT 'up SQL query';
+
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     email TEXT NOT NULL UNIQUE,
@@ -34,3 +38,16 @@ CREATE TABLE reviews (
 );
 
 CREATE INDEX idx_review_reviewer_created_at ON reviews (reviewer_id, created_at); -- b-tree индекс
+
+-- +goose StatementEnd
+
+-- +goose Down
+-- +goose StatementBegin
+SELECT 'down SQL query';
+
+DROP TABLE IF EXISTS users;
+
+DROP TABLE IF EXISTS services;
+
+DROP TABLE IF EXISTS reviews;
+-- +goose StatementEnd

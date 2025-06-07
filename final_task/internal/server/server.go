@@ -1,14 +1,21 @@
 package server
 
 import (
+	"context"
+	"fmt"
 	"net/http"
 	"net/http/pprof"
+	"pavlov061356/go-masters-homework/final_task/internal/config"
 	"pavlov061356/go-masters-homework/final_task/internal/models"
+	"pavlov061356/go-masters-homework/final_task/internal/sentimeter"
 	"pavlov061356/go-masters-homework/final_task/internal/storage"
+	"pavlov061356/go-masters-homework/final_task/internal/storage/postgres"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/rs/zerolog/log"
 )
 
 // Sentimenter это интерфейс для определения настроения текста отзыва
@@ -17,17 +24,42 @@ type Sentimenter interface {
 }
 
 type Server struct {
+	cfg *config.Config
+
 	router chi.Router
+	server *http.Server
 
 	db         storage.Interface
 	sentimeter Sentimenter
 }
 
-func New(db storage.Interface, sentimeter Sentimenter) *Server {
+func New(ctx context.Context) *Server {
+	router := chi.NewRouter()
+
+	cfg, err := config.Load("")
+	if err != nil {
+		log.Fatal().Err(err).Msg("Не удалось загрузить конфигурацию")
+	}
+
+	db, err := postgres.New(cfg.DBPath)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Не удалось создать подключение к базе данных")
+	}
+
+	sentimeter := sentimeter.New(ctx, cfg, db)
+
 	server := &Server{
 		db:         db,
 		sentimeter: sentimeter,
-		router:     chi.NewRouter(),
+		router:     router,
+		cfg:        cfg,
+		server: &http.Server{
+			Addr:         fmt.Sprintf(":%v", cfg.Port),
+			Handler:      router,
+			ReadTimeout:  5 * time.Second,
+			WriteTimeout: 10 * time.Second,
+			IdleTimeout:  25 * time.Second,
+		},
 	}
 
 	server.registerRoutes()
@@ -56,7 +88,7 @@ func (s *Server) registerRoutes() {
 
 	// Инициализация маршрутов
 	s.router.Post("/reviews", s.handleCreateReview)
-	s.router.Get("/reviews", s.handleGetReviews)
+	s.router.Get("/reviews/{reviewID}", s.handleGetReview)
 	s.router.Get("/services/{serviceID}/score", s.handleGetServiceScore)
 
 	s.router.Use(
@@ -65,8 +97,25 @@ func (s *Server) registerRoutes() {
 	)
 }
 
-func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	s.router.ServeHTTP(w, r)
+func (s *Server) Run(ctx context.Context) error {
+	log.Info().Msgf("Запуск сервера на порту %d", s.cfg.Port)
+
+	go func() {
+		<-ctx.Done()
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		log.Info().Msg("Получен сигнал для остановки сервера")
+		if err := s.server.Shutdown(shutdownCtx); err != nil {
+			log.Error().Err(err).Msg("Ошибка при остановке сервера")
+		}
+	}()
+
+	if err := s.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		return err
+	}
+
+	return nil
 }
 
 func healthHandler(w http.ResponseWriter, r *http.Request) {

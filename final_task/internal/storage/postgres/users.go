@@ -1,23 +1,92 @@
 package postgres
 
-import "pavlov061356/go-masters-homework/final_task/internal/models"
+import (
+	"context"
+	"pavlov061356/go-masters-homework/final_task/internal/models"
+)
 
-func (s *Storage) NewUser(user models.User) (int, error) {
-	return 0, nil
+func (s *Storage) NewUser(ctx context.Context, user models.User) (int, error) {
+	var id int
+
+	err := s.conn.QueryRowEx(ctx,
+		`INSERT INTO users (email, password, name) VALUES ($1, $2, $3) RETURNING id`,
+		nil,
+		user.Email,
+		user.Password,
+		user.Username,
+	).Scan(&id)
+
+	if err != nil {
+		return 0, err
+	}
+
+	return id, nil
 }
 
-func (s *Storage) GetUser(id int) (models.User, error) {
-	return models.User{}, nil
+func (s *Storage) GetUser(ctx context.Context, id int) (models.User, error) {
+	var user models.User
+	err := s.conn.QueryRowEx(ctx,
+		`SELECT email, name, password FROM users WHERE id = $1 LIMIT 1
+		`,
+		nil,
+		id,
+	).Scan(
+		&user.Email,
+		&user.Username,
+		&user.Password,
+	)
+
+	if err != nil {
+		return user, err
+	}
+
+	user.ID = id
+
+	return user, nil
 }
 
-func (s *Storage) GetUserByEmail(email string) (models.User, error) {
-	return models.User{}, nil
+func (s *Storage) GetUserByEmail(ctx context.Context, email string) (models.User, error) {
+	var user models.User
+	err := s.conn.QueryRowEx(ctx,
+		`SELECT id, name, password FROM users WHERE email = $1 LIMIT 1
+		`,
+		nil,
+		email,
+	).Scan(
+		&user.ID,
+		&user.Username,
+		&user.Password,
+	)
+
+	if err != nil {
+		return user, err
+	}
+
+	user.Email = email
+
+	return user, nil
 }
 
-func (s *Storage) UpdateUser(user models.User) error {
+func (s *Storage) UpdateUser(ctx context.Context, user models.User) error {
+	_, err := s.conn.ExecEx(ctx,
+		`UPDATE users SET email = $1, name = $2, password = $3 WHERE id = $4`,
+		nil,
+		user.Email,
+		user.Username,
+		user.Password,
+		user.ID,
+	)
+
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
-func (s *Storage) DeleteUser(id int) error {
+func (s *Storage) DeleteUser(ctx context.Context, id int) error {
+	_, err := s.conn.ExecEx(ctx, `DELETE FROM users WHERE id = $1`, nil, id)
+	if err != nil {
+		return err
+	}
 	return nil
 }

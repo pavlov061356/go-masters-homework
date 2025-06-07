@@ -76,6 +76,7 @@ require (
 
 require (
 	github.com/go-chi/chi/v5 v5.2.1
+	github.com/gorilla/schema v1.4.1
 	github.com/jackc/pgx v3.6.2+incompatible
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.19 // indirect

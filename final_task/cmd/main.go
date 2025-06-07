@@ -1,7 +1,11 @@
 package main
 
 import (
+	"context"
 	"os"
+	"os/signal"
+	"pavlov061356/go-masters-homework/final_task/internal/server"
+	"syscall"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -18,4 +22,14 @@ func init() {
 
 func main() {
 	log.Debug().Msg("Начало работы приложения")
+
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill, syscall.SIGTERM)
+	defer cancel()
+
+	server := server.New(ctx)
+
+	if err := server.Run(ctx); err != nil {
+		log.Fatal().Err(err).Msg("Ошибка запуска приложения")
+	}
+
 }
