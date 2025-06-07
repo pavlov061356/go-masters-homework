@@ -19,13 +19,18 @@ CREATE TABLE services (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
     description TEXT NOT NULL,
-    avg_score REAL DEFAULT 0,
-    last_avg_compute_time TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    avg_score REAL DEFAULT 0    
 );
 
 INSERT INTO services (id, name, description) VALUES (1, 'test_service', 'test_service description');
 
 ALTER SEQUENCE services_id_seq RESTART WITH 100;
+
+CREATE TABLE services_avg_score_compute_time (
+    last_avg_compute_time TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO services_avg_score_compute_time (last_avg_compute_time) VALUES (CURRENT_TIMESTAMP);
 
 CREATE TABLE reviews (
     id SERIAL PRIMARY KEY,
@@ -50,4 +55,6 @@ DROP TABLE IF EXISTS users;
 DROP TABLE IF EXISTS services;
 
 DROP TABLE IF EXISTS reviews;
+
+DROP TABLE IF EXISTS services_avg_score_compute_time;
 -- +goose StatementEnd

@@ -7,7 +7,7 @@ import (
 	"net/http/pprof"
 	"pavlov061356/go-masters-homework/final_task/internal/config"
 	"pavlov061356/go-masters-homework/final_task/internal/models"
-	"pavlov061356/go-masters-homework/final_task/internal/sentimeter"
+	sentimeter "pavlov061356/go-masters-homework/final_task/internal/sentimenter"
 	"pavlov061356/go-masters-homework/final_task/internal/storage"
 	"pavlov061356/go-masters-homework/final_task/internal/storage/postgres"
 	"time"
@@ -97,6 +97,7 @@ func (s *Server) registerRoutes() {
 	)
 }
 
+// Run запускает сервер на порту cfg.Port
 func (s *Server) Run(ctx context.Context) error {
 	log.Info().Msgf("Запуск сервера на порту %d", s.cfg.Port)
 
@@ -111,6 +112,8 @@ func (s *Server) Run(ctx context.Context) error {
 		}
 	}()
 
+	go s.refreshAvgScore(ctx)
+
 	if err := s.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		return err
 	}
@@ -121,4 +124,29 @@ func (s *Server) Run(ctx context.Context) error {
 func healthHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("OK"))
+}
+
+// refreshAvgScore пересчитывает среднюю оценку услуг
+func (s *Server) refreshAvgScore(ctx context.Context) error {
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		default:
+			lastRefreshTime, err := s.db.GetLastRecomputeTime(ctx)
+			if err != nil {
+				log.Error().Err(err).Msg("Не удалось получить время последнего пересчёта средней оценки услуг")
+				continue
+			}
+
+			if time.Since(lastRefreshTime) < time.Duration(s.cfg.AvgScoreRefreshTime) {
+				time.Sleep(time.Duration(s.cfg.AvgScoreRefreshTime))
+				continue
+			}
+
+			if err := s.db.RecomputeServicesScore(ctx); err != nil {
+				log.Error().Err(err).Msg("Не удалось пересчитать среднюю оценку услуг")
+			}
+		}
+	}
 }

@@ -8,6 +8,8 @@ import (
 	"github.com/jackc/pgx"
 )
 
+// NewReview метод для создания отзыва.
+// Обновляет среднюю оценку услуги и возвращает id созданного отзыва.
 func (s *Storage) NewReview(ctx context.Context, review models.Review) (int, error) {
 	tx, err := s.conn.BeginEx(ctx, nil)
 	if err != nil {
@@ -64,6 +66,7 @@ func (s *Storage) NewReview(ctx context.Context, review models.Review) (int, err
 	return id, nil
 }
 
+// GetReview метод для получения отзыва по id.
 func (s *Storage) GetReview(ctx context.Context, id int) (models.Review, error) {
 	var review models.Review
 	err := s.conn.QueryRowEx(ctx,
@@ -96,6 +99,8 @@ func (s *Storage) GetReview(ctx context.Context, id int) (models.Review, error) 
 
 	return review, nil
 }
+
+// GetReviewsByService метод для получения отзывов по id услуги.
 func (s *Storage) GetReviewsByService(ctx context.Context, id int) ([]models.Review, error) {
 	rows, err := s.conn.QueryEx(ctx,
 		`SELECT
@@ -141,6 +146,7 @@ func (s *Storage) GetReviewsByService(ctx context.Context, id int) ([]models.Rev
 	return reviews, nil
 }
 
+// GetReviewsByUser метод для получения отзывов по id пользователя.
 func (s *Storage) GetReviewsByUser(ctx context.Context, id int) ([]models.Review, error) {
 	rows, err := s.conn.QueryEx(ctx,
 		`SELECT
@@ -186,6 +192,8 @@ func (s *Storage) GetReviewsByUser(ctx context.Context, id int) ([]models.Review
 	return reviews, nil
 }
 
+// UpdateReview метод для обновления отзыва по id.
+// Метод также обновляет поле avg_score у услуги в случае изменения рейтинга отзыва.
 func (s *Storage) UpdateReview(ctx context.Context, review models.Review) error {
 	tx, err := s.conn.BeginEx(ctx, nil)
 	if err != nil {
@@ -253,6 +261,7 @@ func (s *Storage) UpdateReview(ctx context.Context, review models.Review) error 
 	return nil
 }
 
+// BatchUpdateReviewsSentiment метод для батч-обновления полей Sentiment у отзывов.
 func (s *Storage) BatchUpdateReviewsSentiment(ctx context.Context, reviews []models.Review) error {
 	batch := s.conn.BeginBatch()
 
@@ -275,6 +284,8 @@ func (s *Storage) BatchUpdateReviewsSentiment(ctx context.Context, reviews []mod
 	return nil
 }
 
+// DeleteReview метод для удаления отзыва по id.
+// Метод также обновляет поле avg_score у услуги в случае удаления отзыва.
 func (s *Storage) DeleteReview(ctx context.Context, review models.Review) error {
 	tx, err := s.conn.BeginEx(ctx, nil)
 	if err != nil {

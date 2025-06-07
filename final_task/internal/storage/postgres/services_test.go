@@ -76,4 +76,15 @@ func TestStorage_Services(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+
+	recomputeTime, err := testDB.GetLastRecomputeTime(context.Background())
+	if err != nil {
+		t.Error(err)
+	}
+
+	if recomputeTime.IsZero() {
+		t.Errorf("got %v, want not zero", recomputeTime)
+	}
+
+	t.Log(recomputeTime)
 }

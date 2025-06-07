@@ -14,6 +14,11 @@ var (
 type Config struct {
 	DBPath string `mapstructure:"db_path"`
 	Port   int    `mapstructure:"port"`
+
+	// AvgScoreRefreshTime -- время пересчёта средней оценки в секундах
+	// Во время пересчёта средней оценки при добавлении новой оценки
+	// накапливается ошибка, персчёт её сбрасывает
+	AvgScoreRefreshTime int64 `mapstructure:"avg_score_refresh_time"`
 }
 
 func (c *Config) validate() error {
@@ -30,6 +35,7 @@ func (c *Config) validate() error {
 
 func defaults() {
 	viper.SetDefault("port", 8080)
+	viper.SetDefault("avg_score_refresh_time", 604800) // 1 неделя в секундах
 }
 
 func Load(path string) (*Config, error) {

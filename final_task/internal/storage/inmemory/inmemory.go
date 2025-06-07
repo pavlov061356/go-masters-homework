@@ -4,6 +4,7 @@ import (
 	"context"
 	"pavlov061356/go-masters-homework/final_task/internal/models"
 	"pavlov061356/go-masters-homework/final_task/internal/storage"
+	"time"
 )
 
 var _ storage.Interface = &InMemory{}
@@ -68,4 +69,7 @@ func (InMemory) BatchUpdateReviewsSentiment(context.Context, []models.Review) er
 }
 func (InMemory) RecomputeServicesScore(context.Context) error {
 	return nil
+}
+func (InMemory) GetLastRecomputeTime(context.Context) (time.Time, error) {
+	return time.Now(), nil
 }
