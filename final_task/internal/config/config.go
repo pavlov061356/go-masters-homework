@@ -12,8 +12,9 @@ var (
 )
 
 type Config struct {
-	DBPath string `mapstructure:"db_path"`
-	Port   int    `mapstructure:"port"`
+	DBPath  string `mapstructure:"db_path"`
+	Port    int    `mapstructure:"port"`
+	OtelURL string `mapstructure:"otel_url"`
 
 	// AvgScoreRefreshTime -- время пересчёта средней оценки в секундах
 	// Во время пересчёта средней оценки при добавлении новой оценки
@@ -61,6 +62,7 @@ func defaults() {
 	viper.SetDefault("sentimenter_queue.max_db_queue_len", 1000)
 	viper.SetDefault("sentimenter_queue.max_db_queue_wait", 600) // 10 минут
 	viper.SetDefault("sentimenter.timeout", 60)                  // 1 минута
+	viper.SetDefault("otel_url", "http://localhost:4318")
 }
 
 func Load(path string) (*Config, error) {

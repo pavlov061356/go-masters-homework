@@ -8,12 +8,19 @@ import (
 	"strconv"
 
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func (s *Server) handleCreateReview(w http.ResponseWriter, r *http.Request) {
+	span := trace.SpanFromContext(r.Context())
+	defer span.End()
+
 	review, err := parseBody[models.Review](r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		span.RecordError(err)
 		return
 	}
 
@@ -21,38 +28,48 @@ func (s *Server) handleCreateReview(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Err(err).Msg("Ошибка при создании отзыва")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		span.RecordError(err)
 		return
 	}
 
 	log.Debug().Msgf("Создан новый отзыв с ID %d", id)
+	span.AddEvent("Отзыв создан", trace.WithAttributes(attribute.Int("reviewID", id)))
 
 	review.ID = id
 	s.sentimeter.AddReview(review)
 	log.Debug().Msgf("Отзыв с идентификатором %d отправлен в систему определния настроения отзыва", id)
+	span.AddEvent("Отзыв отправлен в систему определния настроения отзыва", trace.WithAttributes(attribute.Int("reviewID", id)))
 
 	w.WriteHeader(http.StatusCreated)
 	w.Write([]byte(strconv.Itoa(id)))
 }
 
 func (s *Server) handleGetReview(w http.ResponseWriter, r *http.Request) {
+	span := trace.SpanFromContext(r.Context())
+	defer span.End()
+
 	reviewIDStr := r.PathValue("reviewID")
 	if len(reviewIDStr) == 0 {
 		http.Error(w, "не указан reviewID", http.StatusBadRequest)
+		span.RecordError(fmt.Errorf("не указан reviewID"))
 		return
 	}
 
 	reviewID, err := strconv.Atoi(reviewIDStr)
 	if err != nil {
 		http.Error(w, fmt.Errorf("ошибка при преобразовании reviewID в число: %w", err).Error(), http.StatusBadRequest)
+		span.RecordError(fmt.Errorf("ошибка при преобразовании reviewID в число: %w", err))
 		return
 	}
 
 	review, err := s.db.GetReview(r.Context(), reviewID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		span.RecordError(err)
 		return
 	}
 
+	span.SetStatus(codes.Ok, "OK")
 	json.NewEncoder(w).Encode(review)
 }
 

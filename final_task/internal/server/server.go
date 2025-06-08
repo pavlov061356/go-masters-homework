@@ -12,6 +12,7 @@ import (
 	sentimenterQueue "pavlov061356/go-masters-homework/final_task/internal/sentimenter_queue"
 	"pavlov061356/go-masters-homework/final_task/internal/storage"
 	"pavlov061356/go-masters-homework/final_task/internal/storage/postgres"
+	"pavlov061356/go-masters-homework/final_task/internal/telemetry"
 
 	"time"
 
@@ -85,6 +86,7 @@ func (s *Server) registerRoutes() {
 			NoColor: false,
 		}),
 		metrics.PrometheusMiddleware,
+		telemetry.TracingMiddleware,
 	)
 
 	// Эндпоинты pprof
@@ -115,6 +117,17 @@ func (s *Server) registerRoutes() {
 // Run запускает сервер на порту cfg.Port
 func (s *Server) Run(ctx context.Context) error {
 	log.Info().Msgf("Запуск сервера на порту %d", s.cfg.Port)
+
+	shutdown, err := telemetry.SetupOTelSDK(ctx, s.cfg.OtelURL, "final_task")
+	if err != nil {
+		return err
+	}
+	defer func() {
+		err = shutdown(ctx)
+		if err != nil {
+			log.Err(err).Msg("Ошибка при завершении работы OpenTelemetry")
+		}
+	}()
 
 	go func() {
 		<-ctx.Done()
