@@ -3,6 +3,7 @@ package sentimenterQueue
 import (
 	"context"
 	"pavlov061356/go-masters-homework/final_task/internal/config"
+	"pavlov061356/go-masters-homework/final_task/internal/metrics"
 	"pavlov061356/go-masters-homework/final_task/internal/models"
 	"pavlov061356/go-masters-homework/final_task/internal/storage"
 	"sync"
@@ -53,7 +54,7 @@ func New(ctx context.Context, cfg *config.SentimenterQueue, db storage.Interface
 func (s *SentimenterQueue) run() {
 	var wg sync.WaitGroup
 
-	wg.Add(2)
+	wg.Add(3)
 
 	outCh := make(chan models.Review)
 
@@ -81,7 +82,7 @@ func (s *SentimenterQueue) run() {
 				s.mux.Unlock()
 				continue
 			}
-
+			metrics.ReviewsSentimentDistribution.WithLabelValues().Observe(float64(sentiment))
 			review.Sentiment = sentiment
 
 			select {
@@ -93,39 +94,63 @@ func (s *SentimenterQueue) run() {
 		}
 	}()
 
+	mux := &sync.Mutex{}
+	var outReviews []models.Review
+
+	go func() {
+		defer wg.Done()
+		select {
+		case <-s.ctx.Done():
+			return
+		case <-time.After(time.Minute * 5):
+			mux.Lock()
+			metrics.SentimenterQueueLength.Add(float64(len(outReviews)))
+			mux.Unlock()
+		}
+	}()
+
 	// Принцип работы такой, что либо набирается максимальная длина очереди, либо по таймауту очередь отправлется на сохранение в БД.
 	go func() {
 		defer wg.Done()
-		var outReviews []models.Review
 		for {
 			select {
 			case <-s.ctx.Done():
 				return
 			case outReview := <-outCh:
-				log.Debug().Int("len", len(outReviews)).Msg("Добавление отзыва в очередь на сохранение")
-				outReviews = append(outReviews, outReview)
-				if len(outReviews) >= s.cfg.MaxDBQueueLen {
-					log.Debug().Int("len", len(outReviews)).Msg("Сохранение настроений отзывов по превышению максимальной длины очереди")
+				func() {
+					mux.Lock()
+					defer mux.Unlock()
+
+					log.Debug().Int("len", len(outReviews)).Msg("Добавление отзыва в очередь на сохранение")
+					outReviews = append(outReviews, outReview)
+					if len(outReviews) >= s.cfg.MaxDBQueueLen {
+						log.Debug().Int("len", len(outReviews)).Msg("Сохранение настроений отзывов по превышению максимальной длины очереди")
+						err := s.db.BatchUpdateReviewsSentiment(s.ctx, outReviews)
+						if err != nil {
+							log.Err(err).Msg("Ошибка при сохранении настроений отзывов")
+							return
+						}
+						log.Debug().Msg("Сохранение настроений отзывов завершено")
+						outReviews = nil
+					}
+				}()
+			case <-time.After(time.Second * 10):
+				func() {
+					mux.Lock()
+					defer mux.Unlock()
+
+					log.Debug().Int("len", len(outReviews)).Msg("Сохранение настроений отзывов по таймауту")
+					if len(outReviews) == 0 {
+						return
+					}
 					err := s.db.BatchUpdateReviewsSentiment(s.ctx, outReviews)
 					if err != nil {
 						log.Err(err).Msg("Ошибка при сохранении настроений отзывов")
-						continue
+						return
 					}
 					log.Debug().Msg("Сохранение настроений отзывов завершено")
 					outReviews = nil
-				}
-			case <-time.After(time.Second * 10):
-				log.Debug().Int("len", len(outReviews)).Msg("Сохранение настроений отзывов по таймауту")
-				if len(outReviews) == 0 {
-					continue
-				}
-				err := s.db.BatchUpdateReviewsSentiment(s.ctx, outReviews)
-				if err != nil {
-					log.Err(err).Msg("Ошибка при сохранении настроений отзывов")
-					continue
-				}
-				log.Debug().Msg("Сохранение настроений отзывов завершено")
-				outReviews = nil
+				}()
 			}
 		}
 	}()

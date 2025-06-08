@@ -6,11 +6,13 @@ import (
 	"net/http"
 	"net/http/pprof"
 	"pavlov061356/go-masters-homework/final_task/internal/config"
+	"pavlov061356/go-masters-homework/final_task/internal/metrics"
 	"pavlov061356/go-masters-homework/final_task/internal/models"
 	"pavlov061356/go-masters-homework/final_task/internal/sentimenter"
 	sentimenterQueue "pavlov061356/go-masters-homework/final_task/internal/sentimenter_queue"
 	"pavlov061356/go-masters-homework/final_task/internal/storage"
 	"pavlov061356/go-masters-homework/final_task/internal/storage/postgres"
+
 	"time"
 
 	"github.com/go-chi/chi/middleware"
@@ -77,6 +79,12 @@ func (s *Server) registerRoutes() {
 	s.router.Use(
 		middleware.RequestID,
 		middleware.RealIP,
+		middleware.Recoverer,
+		middleware.RequestLogger(&middleware.DefaultLogFormatter{
+			Logger:  &log.Logger,
+			NoColor: false,
+		}),
+		metrics.PrometheusMiddleware,
 	)
 
 	// Эндпоинты pprof
