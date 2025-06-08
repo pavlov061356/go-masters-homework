@@ -19,13 +19,15 @@ func (s *Server) handleCreateReview(w http.ResponseWriter, r *http.Request) {
 
 	id, err := s.db.NewReview(r.Context(), review)
 	if err != nil {
+		log.Err(err).Msg("Ошибка при создании отзыва")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	log.Debug().Msgf("СОздан новый отзыв с ID %d", id)
+	log.Debug().Msgf("Создан новый отзыв с ID %d", id)
 
-	go s.sentimeter.GenerateSentiment(review)
+	s.sentimeter.AddReview(review)
+	log.Debug().Msgf("Отзыв с идентификатором %d отправлен в систему определния настроения отзыва", id)
 
 	w.WriteHeader(http.StatusCreated)
 	w.Write([]byte(strconv.Itoa(id)))

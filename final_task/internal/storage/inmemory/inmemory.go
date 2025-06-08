@@ -73,3 +73,6 @@ func (InMemory) RecomputeServicesScore(context.Context) error {
 func (InMemory) GetLastRecomputeTime(context.Context) (time.Time, error) {
 	return time.Now(), nil
 }
+func (InMemory) GetUnsentimentedReviews(context.Context) ([]models.Review, error) {
+	return nil, nil
+}

@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"errors"
+	"pavlov061356/go-masters-homework/final_task/internal/consts"
 	"pavlov061356/go-masters-homework/final_task/internal/models"
 
 	"github.com/jackc/pgx"
@@ -329,4 +330,34 @@ func (s *Storage) DeleteReview(ctx context.Context, review models.Review) error 
 	}
 
 	return nil
+}
+
+// GetUnsentimentedReviews возвращает необработанные отзывы без оценки настроения отзыва.
+func (s *Storage) GetUnsentimentedReviews(ctx context.Context) ([]models.Review, error) {
+	rows, err := s.conn.QueryEx(ctx, `
+	SELECT id, content
+	FROM reviews
+	WHERE sentiment = $1
+	`,
+		nil,
+		consts.SentimentUnknown,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var reviews []models.Review
+	for rows.Next() {
+		var r models.Review
+		err = rows.Scan(&r.ID, &r.Content)
+		if err != nil {
+			return nil, err
+		}
+
+		reviews = append(reviews, r)
+	}
+
+	return reviews, nil
 }

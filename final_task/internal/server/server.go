@@ -7,7 +7,8 @@ import (
 	"net/http/pprof"
 	"pavlov061356/go-masters-homework/final_task/internal/config"
 	"pavlov061356/go-masters-homework/final_task/internal/models"
-	sentimeter "pavlov061356/go-masters-homework/final_task/internal/sentimenter"
+	"pavlov061356/go-masters-homework/final_task/internal/sentimenter"
+	sentimeter_queue "pavlov061356/go-masters-homework/final_task/internal/sentimenter_queue"
 	"pavlov061356/go-masters-homework/final_task/internal/storage"
 	"pavlov061356/go-masters-homework/final_task/internal/storage/postgres"
 	"time"
@@ -20,7 +21,7 @@ import (
 
 // Sentimenter это интерфейс для определения настроения текста отзыва
 type Sentimenter interface {
-	GenerateSentiment(models.Review) error
+	AddReview(review models.Review)
 }
 
 type Server struct {
@@ -46,7 +47,7 @@ func New(ctx context.Context) *Server {
 		log.Fatal().Err(err).Msg("Не удалось создать подключение к базе данных")
 	}
 
-	sentimeter := sentimeter.New(ctx, cfg, db)
+	sentimeter := sentimeter_queue.New(ctx, &cfg.SentimenterQueue, db, sentimenter.New(cfg.Sentimenter))
 
 	server := &Server{
 		db:         db,

@@ -56,4 +56,6 @@ type Interface interface {
 	// DeleteReview метод для удаления отзыва по id.
 	// Метод также обновляет поле avg_score у услуги в случае удаления отзыва.
 	DeleteReview(context.Context, models.Review) error
+	// GetUnsentimentedReviews возвращает необработанные отзывы без оценки настроения отзыва.
+	GetUnsentimentedReviews(context.Context) ([]models.Review, error)
 }

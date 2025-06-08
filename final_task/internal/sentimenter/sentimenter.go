@@ -1,27 +1,19 @@
-package sentimeter
+package sentimenter
 
 import (
 	"context"
 	"pavlov061356/go-masters-homework/final_task/internal/config"
 	"pavlov061356/go-masters-homework/final_task/internal/models"
-	"pavlov061356/go-masters-homework/final_task/internal/storage"
 )
 
-type Sentimeter struct {
-	ctx context.Context
-
-	cfg *config.Config
-	db  storage.Interface
+type Sentimenter struct {
+	cfg config.Sentimenter
 }
 
-func New(ctx context.Context, cfg *config.Config, db storage.Interface) *Sentimeter {
-	return &Sentimeter{
-		cfg: cfg,
-		db:  db,
-		ctx: ctx,
-	}
+func New(cfg config.Sentimenter) *Sentimenter {
+	return &Sentimenter{cfg: cfg}
 }
 
-func (s *Sentimeter) GenerateSentiment(models.Review) error {
-	return nil
+func (s *Sentimenter) GetReviewSentiment(ctx context.Context, review models.Review) (int, error) {
+	return 0, nil
 }

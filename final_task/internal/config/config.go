@@ -19,6 +19,23 @@ type Config struct {
 	// Во время пересчёта средней оценки при добавлении новой оценки
 	// накапливается ошибка, персчёт её сбрасывает
 	AvgScoreRefreshTime int64 `mapstructure:"avg_score_refresh_time"`
+
+	SentimenterQueue SentimenterQueue `mapstructure:"sentimenter_queue"`
+
+	Sentimenter Sentimenter `mapstructure:"sentimenter"`
+}
+
+// SentimenterQueue - структура настроек очереди обработки настроения отзывов пользователей
+type SentimenterQueue struct {
+	// MaxSentimenterQueueLen - максимальная длина очереди ожидания записи в БД
+	MaxDBQueueLen int `mapstructure:"max_db_queue_len"`
+	// MaxDBQueueWait - максимальное время ожидания получения новых отзывов пользователей в секундах
+	MaxDBQueueWait int `mapstructure:"max_db_queue_wait"`
+}
+
+type Sentimenter struct {
+	Addr    string `mapstructure:"addr"`
+	Timeout int    `mapstructure:"timeout"`
 }
 
 func (c *Config) validate() error {
@@ -36,6 +53,9 @@ func (c *Config) validate() error {
 func defaults() {
 	viper.SetDefault("port", 8080)
 	viper.SetDefault("avg_score_refresh_time", 604800) // 1 неделя в секундах
+	viper.SetDefault("sentimenter_queue.max_db_queue_len", 1000)
+	viper.SetDefault("sentimenter_queue.max_db_queue_wait", 600) // 10 минут
+	viper.SetDefault("sentimenter.timeout", 60)                  // 1 минута
 }
 
 func Load(path string) (*Config, error) {
