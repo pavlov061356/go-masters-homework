@@ -95,21 +95,26 @@ func (s *SentimenterQueue) Run() {
 			case <-s.ctx.Done():
 				return
 			case outReview := <-outCh:
+				log.Debug().Int("len", len(outReviews)).Msg("Добавление отзыва в очередь на сохранение")
 				outReviews = append(outReviews, outReview)
 				if len(outReviews) >= s.cfg.MaxDBQueueLen {
+					log.Debug().Int("len", len(outReviews)).Msg("Сохранение настроений отзывов по превышению максимальной длины очереди")
 					err := s.db.BatchUpdateReviewsSentiment(s.ctx, outReviews)
 					if err != nil {
 						log.Err(err).Msg("Ошибка при сохранении настроений отзывов")
 						continue
 					}
+					log.Debug().Msg("Сохранение настроений отзывов завершено")
 					outReviews = nil
 				}
 			case <-time.After(time.Second * 10):
+				log.Debug().Int("len", len(outReviews)).Msg("Сохранение настроений отзывов по таймауту")
 				err := s.db.BatchUpdateReviewsSentiment(s.ctx, outReviews)
 				if err != nil {
 					log.Err(err).Msg("Ошибка при сохранении настроений отзывов")
 					continue
 				}
+				log.Debug().Msg("Сохранение настроений отзывов завершено")
 				outReviews = nil
 			}
 		}
