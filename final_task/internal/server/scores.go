@@ -17,6 +17,7 @@ func (s *Server) handleGetServiceScore(w http.ResponseWriter, r *http.Request) {
 	if len(serviceIDStr) == 0 {
 		http.Error(w, "не указан serviceID", http.StatusBadRequest)
 		span.RecordError(fmt.Errorf("не указан serviceID"))
+
 		return
 	}
 
@@ -24,6 +25,7 @@ func (s *Server) handleGetServiceScore(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, fmt.Errorf("ошибка при преобразовании serviceID в число: %w", err).Error(), http.StatusBadRequest)
 		span.RecordError(fmt.Errorf("ошибка при преобразовании serviceID в число: %w", err))
+
 		return
 	}
 
@@ -31,9 +33,19 @@ func (s *Server) handleGetServiceScore(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		span.RecordError(err)
+
 		return
 	}
 
 	span.SetStatus(codes.Ok, "Запрос успешно обработан")
-	w.Write(fmt.Appendf(nil, "%f", service.AvgScore))
+
+	_, err = w.Write(fmt.Appendf(nil, "%f", service.AvgScore))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		span.RecordError(err)
+
+		return
+	}
+
+	span.SetStatus(codes.Ok, "OK")
 }

@@ -19,8 +19,6 @@ type Sentimenter interface {
 
 // SentimenterQueue структура организации очереди получения настроения отзыва и записи полученных данных в БД.
 type SentimenterQueue struct {
-	ctx context.Context
-
 	cfg         *config.SentimenterQueue
 	db          storage.Interface
 	sentimenter Sentimenter
@@ -34,7 +32,6 @@ func New(ctx context.Context, cfg *config.SentimenterQueue, db storage.Interface
 	queue := SentimenterQueue{
 		cfg:         cfg,
 		db:          db,
-		ctx:         ctx,
 		sentimenter: sentimenter,
 	}
 
@@ -43,15 +40,16 @@ func New(ctx context.Context, cfg *config.SentimenterQueue, db storage.Interface
 		log.Err(err).Msg("Ошибка при получении отзывов без настроения отзыва")
 		return nil
 	}
+
 	queue.reviewsQueue = reviews
 
-	go queue.run()
+	go queue.run(ctx)
 
 	return &queue
 }
 
 // Run запускает очередь получения настроения отзыва и записи полученных данных в БД.
-func (s *SentimenterQueue) run() {
+func (s *SentimenterQueue) run(ctx context.Context) {
 	var wg sync.WaitGroup
 
 	wg.Add(3)
@@ -60,9 +58,11 @@ func (s *SentimenterQueue) run() {
 
 	go func() {
 		defer wg.Done()
+
 		for {
 			s.mux.Lock()
 			var review models.Review
+
 			if len(s.reviewsQueue) > 0 {
 				review = s.reviewsQueue[0]
 				s.reviewsQueue = s.reviewsQueue[1:]
@@ -74,19 +74,21 @@ func (s *SentimenterQueue) run() {
 				continue
 			}
 
-			sentiment, err := s.sentimenter.GetReviewSentiment(s.ctx, review)
+			sentiment, err := s.sentimenter.GetReviewSentiment(ctx, review)
 			if err != nil {
 				log.Err(err).Msg("Ошибка при получении настроения отзыва")
 				s.mux.Lock()
 				s.reviewsQueue = append(s.reviewsQueue, review)
 				s.mux.Unlock()
+
 				continue
 			}
+
 			metrics.ReviewsSentimentDistribution.WithLabelValues().Observe(float64(sentiment))
 			review.Sentiment = sentiment
 
 			select {
-			case <-s.ctx.Done():
+			case <-ctx.Done():
 				close(outCh)
 				return
 			case outCh <- review:
@@ -95,12 +97,13 @@ func (s *SentimenterQueue) run() {
 	}()
 
 	mux := &sync.Mutex{}
+
 	var outReviews []models.Review
 
 	go func() {
 		defer wg.Done()
 		select {
-		case <-s.ctx.Done():
+		case <-ctx.Done():
 			return
 		case <-time.After(time.Minute * 5):
 			mux.Lock()
@@ -112,9 +115,10 @@ func (s *SentimenterQueue) run() {
 	// Принцип работы такой, что либо набирается максимальная длина очереди, либо по таймауту очередь отправлется на сохранение в БД.
 	go func() {
 		defer wg.Done()
+
 		for {
 			select {
-			case <-s.ctx.Done():
+			case <-ctx.Done():
 				return
 			case outReview := <-outCh:
 				func() {
@@ -123,14 +127,18 @@ func (s *SentimenterQueue) run() {
 
 					log.Debug().Int("len", len(outReviews)).Msg("Добавление отзыва в очередь на сохранение")
 					outReviews = append(outReviews, outReview)
+
 					if len(outReviews) >= s.cfg.MaxDBQueueLen {
 						log.Debug().Int("len", len(outReviews)).Msg("Сохранение настроений отзывов по превышению максимальной длины очереди")
-						err := s.db.BatchUpdateReviewsSentiment(s.ctx, outReviews)
+						err := s.db.BatchUpdateReviewsSentiment(ctx, outReviews)
+
 						if err != nil {
 							log.Err(err).Msg("Ошибка при сохранении настроений отзывов")
 							return
 						}
+
 						log.Debug().Msg("Сохранение настроений отзывов завершено")
+
 						outReviews = nil
 					}
 				}()
@@ -140,15 +148,20 @@ func (s *SentimenterQueue) run() {
 					defer mux.Unlock()
 
 					log.Debug().Int("len", len(outReviews)).Msg("Сохранение настроений отзывов по таймауту")
+
 					if len(outReviews) == 0 {
 						return
 					}
-					err := s.db.BatchUpdateReviewsSentiment(s.ctx, outReviews)
+
+					err := s.db.BatchUpdateReviewsSentiment(ctx, outReviews)
+
 					if err != nil {
 						log.Err(err).Msg("Ошибка при сохранении настроений отзывов")
 						return
 					}
+
 					log.Debug().Msg("Сохранение настроений отзывов завершено")
+
 					outReviews = nil
 				}()
 			}

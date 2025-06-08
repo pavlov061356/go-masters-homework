@@ -17,10 +17,13 @@ func New(dsn string) (*Storage, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	conn, err := pgx.Connect(config)
+
 	if err != nil {
 		return nil, err
 	}
+
 	return &Storage{
 		conn: conn,
 	}, nil

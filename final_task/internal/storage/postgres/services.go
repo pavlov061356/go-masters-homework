@@ -108,7 +108,7 @@ func (s *Storage) RecomputeServicesScore(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer tx.Rollback() //nolint:errcheck
 
 	_, err = tx.ExecEx(ctx, `
 	UPDATE services 

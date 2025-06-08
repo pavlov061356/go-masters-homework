@@ -29,6 +29,7 @@ func main() {
 	server := server.New(ctx)
 
 	if err := server.Run(ctx); err != nil {
-		log.Fatal().Err(err).Msg("Ошибка запуска приложения")
+		log.Err(err).Msg("Ошибка запуска приложения")
+		return
 	}
 }

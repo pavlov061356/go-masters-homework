@@ -16,7 +16,7 @@ func (s *Storage) NewReview(ctx context.Context, review models.Review) (int, err
 	if err != nil {
 		return 0, err
 	}
-	defer tx.RollbackEx(ctx)
+	defer tx.RollbackEx(ctx) //nolint:errcheck
 
 	var id int
 
@@ -125,6 +125,7 @@ func (s *Storage) GetReviewsByService(ctx context.Context, id int) ([]models.Rev
 	defer rows.Close()
 
 	reviews := []models.Review{}
+
 	for rows.Next() {
 		var review models.Review
 
@@ -171,6 +172,7 @@ func (s *Storage) GetReviewsByUser(ctx context.Context, id int) ([]models.Review
 	defer rows.Close()
 
 	reviews := []models.Review{}
+
 	for rows.Next() {
 		var review models.Review
 
@@ -200,7 +202,7 @@ func (s *Storage) UpdateReview(ctx context.Context, review models.Review) error 
 	if err != nil {
 		return err
 	}
-	defer tx.RollbackEx(ctx)
+	defer tx.RollbackEx(ctx) //nolint:errcheck
 
 	var currentScore int
 	err = tx.QueryRowEx(ctx,
@@ -208,6 +210,7 @@ func (s *Storage) UpdateReview(ctx context.Context, review models.Review) error 
 		nil,
 		review.ID,
 	).Scan(&currentScore)
+
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return err
 	}
@@ -292,7 +295,7 @@ func (s *Storage) DeleteReview(ctx context.Context, review models.Review) error 
 	if err != nil {
 		return err
 	}
-	defer tx.RollbackEx(ctx)
+	defer tx.RollbackEx(ctx) //nolint:errcheck
 
 	_, err = tx.ExecEx(ctx,
 		`DELETE FROM reviews WHERE id = $1`,
@@ -346,12 +349,15 @@ func (s *Storage) GetUnsentimentedReviews(ctx context.Context) ([]models.Review,
 	if err != nil {
 		return nil, err
 	}
+
 	defer rows.Close()
 
 	var reviews []models.Review
+
 	for rows.Next() {
 		var r models.Review
 		err = rows.Scan(&r.ID, &r.Content)
+
 		if err != nil {
 			return nil, err
 		}

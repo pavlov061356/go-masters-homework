@@ -23,6 +23,7 @@ func TracingMiddleware(next http.Handler) http.Handler {
 				attribute.String("X-Request-Id", uuid.New().String()),
 			),
 		)
+
 		defer span.End()
 
 		r = r.Clone(ctx)

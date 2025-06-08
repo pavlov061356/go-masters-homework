@@ -5,7 +5,19 @@ import (
 	"time"
 )
 
-// User - пользователь
+var (
+	ErrEmptyServiceName = errors.New("название услуги не может быть пустым")
+	ErrEmptyServiceDesc = errors.New("описание услуги не может быть пустым")
+)
+
+var (
+	ErrEmptyReviewName  = errors.New("отзыв не может быть пустым")
+	ErrEmptyReviewScore = errors.New("оценка должна быть в диапазоне от 1 до 5 включительно")
+	ErrEmptyReviewerID  = errors.New("отзыв должен содержать идентификатор пользователя")
+	ErrEmptyServiceID   = errors.New("отзыв должен содержать идентификатор услуги")
+)
+
+// User - пользователь.
 type User struct {
 	ID       int    `json:"id"`
 	Email    string `json:"email"`
@@ -13,7 +25,7 @@ type User struct {
 	Password string `json:"password"`
 }
 
-// Service - предоставляемая услуга
+// Service - предоставляемая услуга.
 type Service struct {
 	ID          int     `json:"id"`
 	Name        string  `json:"name"`
@@ -23,20 +35,22 @@ type Service struct {
 
 func (s Service) Validate() error {
 	if s.Name == "" {
-		return errors.New("название услуги не может быть пустым")
+		return ErrEmptyServiceName
 	}
+
 	if s.Description == "" {
-		return errors.New("описание услуги не может быть пустым")
+		return ErrEmptyServiceDesc
 	}
+
 	return nil
 }
 
-// Review - отзыв о предоставляемой услуге
+// Review - отзыв о предоставляемой услуге.
 type Review struct {
 	ID         int       `json:"id"`
 	Content    string    `json:"content"`
-	Sentiment  int       `json:"sentiment"` // 0 - не определён, 1 - положительный, 2 - нормальный, 3 - отрицательный
-	Score      int       `json:"score"`     // 1-5 оценка пользователя
+	Sentiment  int       `json:"sentiment"` // 0 - не определён, 1 - положительный, 2 - нормальный, 3 - отрицательный.
+	Score      int       `json:"score"`     // 1-5 оценка пользователя.
 	CreatedAt  time.Time `json:"created_at"`
 	ReviewerID int       `json:"reviewer_id"`
 	ServiceID  int       `json:"service_id"`
@@ -44,19 +58,20 @@ type Review struct {
 
 func (r Review) Validate() error {
 	if r.Content == "" {
-		return errors.New("отзыв не может быть пустым")
+		return ErrEmptyReviewName
 	}
 
 	if r.Score < 1 || r.Score > 5 {
-		return errors.New("оценка должна быть в диапазоне от 1 до 5 включительно")
+		return ErrEmptyReviewScore
 	}
 
 	if r.ReviewerID == 0 {
-		return errors.New("отзыв должен содержать идентификатор пользователя")
+		return ErrEmptyReviewerID
 	}
 
 	if r.ServiceID == 0 {
-		return errors.New("отзыв должен содержать идентификатор услуги")
+		return ErrEmptyServiceID
 	}
+
 	return nil
 }

@@ -84,6 +84,7 @@ func (s *Storage) UpdateUser(ctx context.Context, user models.User) error {
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -93,5 +94,6 @@ func (s *Storage) DeleteUser(ctx context.Context, id int) error {
 	if err != nil {
 		return err
 	}
+
 	return nil
 }

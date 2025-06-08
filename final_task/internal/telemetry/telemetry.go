@@ -15,6 +15,7 @@ import (
 
 func SetupOTelSDK(ctx context.Context, endpoint string, serviceName string) (func(context.Context) error, error) {
 	var shutdownFuncs []func(context.Context) error
+
 	var err error
 
 	shutdown := func(ctx context.Context) error {
@@ -22,7 +23,9 @@ func SetupOTelSDK(ctx context.Context, endpoint string, serviceName string) (fun
 		for _, fn := range shutdownFuncs {
 			err = errors.Join(err, fn(ctx))
 		}
+
 		shutdownFuncs = nil
+
 		return err
 	}
 
@@ -38,6 +41,7 @@ func SetupOTelSDK(ctx context.Context, endpoint string, serviceName string) (fun
 		handleErr(err)
 		return nil, err
 	}
+
 	shutdownFuncs = append(shutdownFuncs, tracerProvider.Shutdown)
 	otel.SetTracerProvider(tracerProvider)
 
@@ -70,5 +74,6 @@ func newTraceProvider(ctx context.Context, endpoint string, serviceName string) 
 		trace.WithBatcher(traceExporter, trace.WithBatchTimeout(5*time.Second)),
 		trace.WithResource(traceRes),
 	)
+
 	return traceProvider, nil
 }

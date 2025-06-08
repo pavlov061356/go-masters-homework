@@ -36,7 +36,7 @@ func (inMemory) DeleteUser(context.Context, int) error {
 	return nil
 }
 
-// CRUD методы для работы с услугами
+// CRUD методы для работы с услугами.
 func (inMemory) NewService(context.Context, models.Service) (int, error) {
 	return 0, nil
 }
@@ -53,7 +53,7 @@ func (inMemory) DeleteService(context.Context, int) error {
 	return nil
 }
 
-// CRUD методы для работы с отзывами
+// CRUD методы для работы с отзывами.
 func (inMemory) NewReview(context.Context, models.Review) (int, error) {
 	return 0, nil
 }
@@ -72,8 +72,8 @@ func (inMemory) UpdateReview(context.Context, models.Review) error {
 func (inMemory) DeleteReview(context.Context, models.Review) error {
 	return nil
 }
-func (s inMemory) BatchUpdateReviewsSentiment(_ context.Context, reveiws []models.Review) error {
-	s.outCH <- reveiws
+func (s inMemory) BatchUpdateReviewsSentiment(_ context.Context, reviews []models.Review) error {
+	s.outCH <- reviews
 	return nil
 }
 func (inMemory) RecomputeServicesScore(context.Context) error {
@@ -90,5 +90,5 @@ type sentimenterStub struct {
 }
 
 func (sentimenterStub) GetReviewSentiment(ctx context.Context, review models.Review) (int, error) {
-	return rand.IntN(3) + 1, nil
+	return rand.IntN(3) + 1, nil //nolint:gosec
 }

@@ -43,7 +43,7 @@ var (
 	})
 )
 
-// PrometheusMiddleware - middleware для сбора метрик
+// PrometheusMiddleware - middleware для сбора метрик.
 func PrometheusMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()

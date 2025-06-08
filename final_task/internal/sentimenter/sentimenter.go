@@ -37,6 +37,7 @@ func New(cfg config.Sentimenter) (*Sentimenter, error) {
 
 	// http.DefaultClient.
 	client := api.NewClient(addr, http.DefaultClient)
+
 	return &Sentimenter{cfg: cfg, client: client}, nil
 }
 
@@ -58,6 +59,7 @@ func (s *Sentimenter) GetReviewSentiment(ctx context.Context, review models.Revi
 	if review.Content == "" {
 		return sentimentFromReviewScore(review.Score), nil
 	}
+
 	req := &api.GenerateRequest{
 		Model:  s.cfg.Model,
 		Prompt: fmt.Sprintf(`Generate sentiment of the review: "%s"; return sentiment as integer: 1 - positive; 2 - neutral; 3 - negative;`, review.Content),
@@ -73,13 +75,17 @@ func (s *Sentimenter) GetReviewSentiment(ctx context.Context, review models.Revi
 
 	respFunc := func(resp api.GenerateResponse) error {
 		sentiment, err := strconv.Atoi(strings.TrimSpace(resp.Response[:1]))
+
 		var response response
+
 		if err != nil {
 			response.err = err
 		}
+
 		response.sentiment = sentiment
 		respChan <- response
 		close(respChan)
+
 		return nil
 	}
 
@@ -90,8 +96,10 @@ func (s *Sentimenter) GetReviewSentiment(ctx context.Context, review models.Revi
 
 	wg := sync.WaitGroup{}
 	wg.Add(1)
+
 	go func() {
 		defer wg.Done()
+
 		for response := range respChan {
 			gotResponse = response
 		}
@@ -111,5 +119,6 @@ func (s *Sentimenter) GetReviewSentiment(ctx context.Context, review models.Revi
 	if gotResponse.sentiment == 0 {
 		return sentimentFromReviewScore(review.Score), nil
 	}
+
 	return gotResponse.sentiment, nil
 }

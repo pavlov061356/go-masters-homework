@@ -18,7 +18,7 @@ type Config struct {
 
 	// AvgScoreRefreshTime -- время пересчёта средней оценки в секундах
 	// Во время пересчёта средней оценки при добавлении новой оценки
-	// накапливается ошибка, персчёт её сбрасывает
+	// накапливается ошибка, персчёт её сбрасывает.
 	AvgScoreRefreshTime int64 `mapstructure:"avg_score_refresh_time"`
 
 	SentimenterQueue SentimenterQueue `mapstructure:"sentimenter_queue"`
@@ -26,21 +26,21 @@ type Config struct {
 	Sentimenter Sentimenter `mapstructure:"sentimenter"`
 }
 
-// SentimenterQueue - структура настроек очереди обработки настроения отзывов пользователей
+// SentimenterQueue - структура настроек очереди обработки настроения отзывов пользователей.
 type SentimenterQueue struct {
-	// MaxSentimenterQueueLen - максимальная длина очереди ожидания записи в БД
+	// MaxSentimenterQueueLen - максимальная длина очереди ожидания записи в БД.
 	MaxDBQueueLen int `mapstructure:"max_db_queue_len"`
-	// MaxDBQueueWait - максимальное время ожидания получения новых отзывов пользователей в секундах
+	// MaxDBQueueWait - максимальное время ожидания получения новых отзывов пользователей в секундах.
 	MaxDBQueueWait int `mapstructure:"max_db_queue_wait"`
 }
 
-// Sentimenter - структура настроек подключения к сервису расчёта настроения отзывов пользователей
+// Sentimenter - структура настроек подключения к сервису расчёта настроения отзывов пользователей.
 type Sentimenter struct {
-	// Addr - адрес сервиса расчёта настроения отзывов пользователей
+	// Addr - адрес сервиса расчёта настроения отзывов пользователей.
 	Addr string `mapstructure:"addr"`
-	// Timeout - таймаут запроса к сервису расчёта настроения отзыва пользователя в секундах
+	// Timeout - таймаут запроса к сервису расчёта настроения отзыва пользователя в секундах.
 	Timeout int `mapstructure:"timeout"`
-	// Model - название модели нейросети для расчёта настроения отзыва пользователя
+	// Model - название модели нейросети для расчёта настроения отзыва пользователя.
 	Model string `mapstructure:"model"`
 }
 

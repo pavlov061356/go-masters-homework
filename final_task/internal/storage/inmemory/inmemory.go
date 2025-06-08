@@ -28,7 +28,7 @@ func (InMemory) DeleteUser(context.Context, int) error {
 	return nil
 }
 
-// CRUD методы для работы с услугами
+// CRUD методы для работы с услугами.
 func (InMemory) NewService(context.Context, models.Service) (int, error) {
 	return 0, nil
 }
@@ -45,7 +45,7 @@ func (InMemory) DeleteService(context.Context, int) error {
 	return nil
 }
 
-// CRUD методы для работы с отзывами
+// CRUD методы для работы с отзывами.
 func (InMemory) NewReview(context.Context, models.Review) (int, error) {
 	return 0, nil
 }

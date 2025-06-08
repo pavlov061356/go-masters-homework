@@ -22,7 +22,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// Sentimenter это интерфейс для определения настроения текста отзыва
+// Sentimenter это интерфейс для определения настроения текста отзыва.
 type Sentimenter interface {
 	AddReview(review models.Review)
 }
@@ -49,6 +49,7 @@ func New(ctx context.Context) *Server {
 	if err != nil {
 		log.Fatal().Err(err).Msg("Не удалось создать подключение к базе данных")
 	}
+
 	sentimenter, err := sentimenter.New(cfg.Sentimenter)
 
 	if err != nil {
@@ -107,14 +108,14 @@ func (s *Server) registerRoutes() {
 
 	s.router.Get("/metrics", promhttp.Handler().ServeHTTP)
 
-	// Инициализация маршрутов
+	// Инициализация маршрутов.
 	s.router.Post("/reviews", s.handleCreateReview)
 	s.router.Get("/reviews/{reviewID}", s.handleGetReview)
 	s.router.Get("/reviews/byService/{serviceID}", s.handleGetReviewsByService)
 	s.router.Get("/services/{serviceID}/score", s.handleGetServiceScore)
 }
 
-// Run запускает сервер на порту cfg.Port
+// Run запускает сервер на порту cfg.Port.
 func (s *Server) Run(ctx context.Context) error {
 	log.Info().Msgf("Запуск сервера на порту %d", s.cfg.Port)
 
@@ -122,6 +123,7 @@ func (s *Server) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
 	defer func() {
 		err = shutdown(ctx)
 		if err != nil {
@@ -132,16 +134,19 @@ func (s *Server) Run(ctx context.Context) error {
 	go func() {
 		<-ctx.Done()
 		log.Info().Msg("Завершение работы сервера")
+
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+
 		defer cancel()
 
 		log.Info().Msg("Получен сигнал для остановки сервера")
+
 		if err := s.server.Shutdown(shutdownCtx); err != nil {
 			log.Error().Err(err).Msg("Ошибка при остановке сервера")
 		}
 	}()
 
-	go s.refreshAvgScore(ctx)
+	go s.refreshAvgScore(ctx) //nolint:errcheck
 
 	if err := s.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		return err
@@ -152,10 +157,14 @@ func (s *Server) Run(ctx context.Context) error {
 
 func healthHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("OK"))
+	_, err := w.Write([]byte("OK"))
+
+	if err != nil {
+		log.Error().Err(err).Msg("Ошибка при записи ответа")
+	}
 }
 
-// refreshAvgScore пересчитывает среднюю оценку услуг
+// refreshAvgScore пересчитывает среднюю оценку услуг.
 func (s *Server) refreshAvgScore(ctx context.Context) error {
 	for {
 		select {
@@ -164,7 +173,9 @@ func (s *Server) refreshAvgScore(ctx context.Context) error {
 		default:
 			func() {
 				defer time.Sleep(time.Minute)
+
 				lastRefreshTime, err := s.db.GetLastRecomputeTime(ctx)
+
 				if err != nil {
 					log.Error().Err(err).Msg("Не удалось получить время последнего пересчёта средней оценки услуг")
 					return
