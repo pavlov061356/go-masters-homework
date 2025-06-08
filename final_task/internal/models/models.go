@@ -7,18 +7,18 @@ import (
 
 // User - пользователь
 type User struct {
-	ID       int
-	Email    string
-	Username string
-	Password string
+	ID       int    `json:"id"`
+	Email    string `json:"email"`
+	Username string `json:"username"`
+	Password string `json:"password"`
 }
 
 // Service - предоставляемая услуга
 type Service struct {
-	ID          int
-	Name        string
-	Description string
-	AvgScore    float64
+	ID          int     `json:"id"`
+	Name        string  `json:"name"`
+	Description string  `json:"description"`
+	AvgScore    float64 `json:"avg_score"`
 }
 
 func (s Service) Validate() error {
@@ -33,13 +33,13 @@ func (s Service) Validate() error {
 
 // Review - отзыв о предоставляемой услуге
 type Review struct {
-	ID         int
-	Content    string
-	Sentiment  int // 0 - не определён, 1 - положительный, 2 - нормальный, 3 - отрицательный
-	Score      int // 1-5 оценка пользователя
-	CreatedAt  time.Time
-	ReviewerID int
-	ServiceID  int
+	ID         int       `json:"id"`
+	Content    string    `json:"content"`
+	Sentiment  int       `json:"sentiment"` // 0 - не определён, 1 - положительный, 2 - нормальный, 3 - отрицательный
+	Score      int       `json:"score"`     // 1-5 оценка пользователя
+	CreatedAt  time.Time `json:"created_at"`
+	ReviewerID int       `json:"reviewer_id"`
+	ServiceID  int       `json:"service_id"`
 }
 
 func (r Review) Validate() error {

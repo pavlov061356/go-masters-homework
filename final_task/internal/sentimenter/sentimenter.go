@@ -20,6 +20,7 @@ import (
 
 var _ sentimenterQueue.Sentimenter = (*Sentimenter)(nil)
 
+// Sentimenter работает с Ollama для получения настроения отзыва.
 type Sentimenter struct {
 	cfg config.Sentimenter
 
@@ -39,6 +40,7 @@ func New(cfg config.Sentimenter) (*Sentimenter, error) {
 	return &Sentimenter{cfg: cfg, client: client}, nil
 }
 
+// sentimentFromReviewScore возвращает настроение на основе оценки отзыва.
 func sentimentFromReviewScore(score int) int {
 	switch {
 	case score <= 2:
@@ -50,6 +52,8 @@ func sentimentFromReviewScore(score int) int {
 	}
 }
 
+// GetReviewSentiment возвращает настроение отзыва.
+// Если отзыв не содержит текста, то возвращается настроение на основе оценки отзыва.
 func (s *Sentimenter) GetReviewSentiment(ctx context.Context, review models.Review) (int, error) {
 	if review.Content == "" {
 		return sentimentFromReviewScore(review.Score), nil
@@ -57,7 +61,7 @@ func (s *Sentimenter) GetReviewSentiment(ctx context.Context, review models.Revi
 	req := &api.GenerateRequest{
 		Model:  s.cfg.Model,
 		Prompt: fmt.Sprintf(`Generate sentiment of the review: "%s"; return sentiment as integer: 1 - positive; 2 - neutral; 3 - negative;`, review.Content),
-		Stream: new(bool),
+		Stream: new(bool), // перадётся *false, чтобы ответ приходил единым целым
 	}
 
 	type response struct {
@@ -68,7 +72,6 @@ func (s *Sentimenter) GetReviewSentiment(ctx context.Context, review models.Revi
 	respChan := make(chan response)
 
 	respFunc := func(resp api.GenerateResponse) error {
-		log.Debug().Msg(resp.Response)
 		sentiment, err := strconv.Atoi(strings.TrimSpace(resp.Response[:1]))
 		var response response
 		if err != nil {

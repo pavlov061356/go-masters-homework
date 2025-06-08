@@ -11,10 +11,12 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// Sentimenter интерфейс сервиса для получения настроения отзыва.
 type Sentimenter interface {
 	GetReviewSentiment(ctx context.Context, review models.Review) (int, error)
 }
 
+// SentimenterQueue структура организации очереди получения настроения отзыва и записи полученных данных в БД.
 type SentimenterQueue struct {
 	ctx context.Context
 
@@ -26,6 +28,7 @@ type SentimenterQueue struct {
 	reviewsQueue []models.Review
 }
 
+// New создает очередь получения настроения отзыва и записи полученных данных в БД.
 func New(ctx context.Context, cfg *config.SentimenterQueue, db storage.Interface, sentimenter Sentimenter) *SentimenterQueue {
 	queue := SentimenterQueue{
 		cfg:         cfg,
@@ -41,10 +44,13 @@ func New(ctx context.Context, cfg *config.SentimenterQueue, db storage.Interface
 	}
 	queue.reviewsQueue = reviews
 
+	go queue.run()
+
 	return &queue
 }
 
-func (s *SentimenterQueue) Run() {
+// Run запускает очередь получения настроения отзыва и записи полученных данных в БД.
+func (s *SentimenterQueue) run() {
 	var wg sync.WaitGroup
 
 	wg.Add(2)
@@ -87,6 +93,7 @@ func (s *SentimenterQueue) Run() {
 		}
 	}()
 
+	// Принцип работы такой, что либо набирается максимальная длина очереди, либо по таймауту очередь отправлется на сохранение в БД.
 	go func() {
 		defer wg.Done()
 		var outReviews []models.Review
@@ -109,6 +116,9 @@ func (s *SentimenterQueue) Run() {
 				}
 			case <-time.After(time.Second * 10):
 				log.Debug().Int("len", len(outReviews)).Msg("Сохранение настроений отзывов по таймауту")
+				if len(outReviews) == 0 {
+					continue
+				}
 				err := s.db.BatchUpdateReviewsSentiment(s.ctx, outReviews)
 				if err != nil {
 					log.Err(err).Msg("Ошибка при сохранении настроений отзывов")

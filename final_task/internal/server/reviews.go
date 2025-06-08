@@ -11,7 +11,7 @@ import (
 )
 
 func (s *Server) handleCreateReview(w http.ResponseWriter, r *http.Request) {
-	review, err := parseQuery[models.Review](r)
+	review, err := parseBody[models.Review](r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -26,6 +26,7 @@ func (s *Server) handleCreateReview(w http.ResponseWriter, r *http.Request) {
 
 	log.Debug().Msgf("Создан новый отзыв с ID %d", id)
 
+	review.ID = id
 	s.sentimeter.AddReview(review)
 	log.Debug().Msgf("Отзыв с идентификатором %d отправлен в систему определния настроения отзыва", id)
 
@@ -53,4 +54,26 @@ func (s *Server) handleGetReview(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.NewEncoder(w).Encode(review)
+}
+
+func (s *Server) handleGetReviewsByService(w http.ResponseWriter, r *http.Request) {
+	serviceIDStr := r.PathValue("serviceID")
+	if len(serviceIDStr) == 0 {
+		http.Error(w, "не указан serviceID", http.StatusBadRequest)
+		return
+	}
+
+	serviceID, err := strconv.Atoi(serviceIDStr)
+	if err != nil {
+		http.Error(w, fmt.Errorf("ошибка при преобразовании serviceID в число: %w", err).Error(), http.StatusBadRequest)
+		return
+	}
+
+	reviews, err := s.db.GetReviewsByService(r.Context(), serviceID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(reviews)
 }

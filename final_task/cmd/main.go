@@ -31,5 +31,4 @@ func main() {
 	if err := server.Run(ctx); err != nil {
 		log.Fatal().Err(err).Msg("Ошибка запуска приложения")
 	}
-
 }

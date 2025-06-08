@@ -1,0 +1,6 @@
+db_path: "postgres://postgres:password@localhost:5432/db?sslmode=disable"
+port: 8080
+sentimenter_queue:
+  addr: http://localhost:11434
+  model: mistral
+

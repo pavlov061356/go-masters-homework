@@ -13,8 +13,8 @@ import (
 	"pavlov061356/go-masters-homework/final_task/internal/storage/postgres"
 	"time"
 
+	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog/log"
 )
@@ -74,6 +74,11 @@ func New(ctx context.Context) *Server {
 }
 
 func (s *Server) registerRoutes() {
+	s.router.Use(
+		middleware.RequestID,
+		middleware.RealIP,
+	)
+
 	// Эндпоинты pprof
 	// http://localhost:8080/debug/pprof/
 	s.router.Get("/debug/pprof/", pprof.Index)
@@ -95,12 +100,8 @@ func (s *Server) registerRoutes() {
 	// Инициализация маршрутов
 	s.router.Post("/reviews", s.handleCreateReview)
 	s.router.Get("/reviews/{reviewID}", s.handleGetReview)
+	s.router.Get("/reviews/byService/{serviceID}", s.handleGetReviewsByService)
 	s.router.Get("/services/{serviceID}/score", s.handleGetServiceScore)
-
-	s.router.Use(
-		middleware.RequestID,
-		middleware.RealIP,
-	)
 }
 
 // Run запускает сервер на порту cfg.Port
@@ -109,6 +110,7 @@ func (s *Server) Run(ctx context.Context) error {
 
 	go func() {
 		<-ctx.Done()
+		log.Info().Msg("Завершение работы сервера")
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
@@ -139,20 +141,23 @@ func (s *Server) refreshAvgScore(ctx context.Context) error {
 		case <-ctx.Done():
 			return nil
 		default:
-			lastRefreshTime, err := s.db.GetLastRecomputeTime(ctx)
-			if err != nil {
-				log.Error().Err(err).Msg("Не удалось получить время последнего пересчёта средней оценки услуг")
-				continue
-			}
+			func() {
+				defer time.Sleep(time.Minute)
+				lastRefreshTime, err := s.db.GetLastRecomputeTime(ctx)
+				if err != nil {
+					log.Error().Err(err).Msg("Не удалось получить время последнего пересчёта средней оценки услуг")
+					return
+				}
 
-			if time.Since(lastRefreshTime) < time.Duration(s.cfg.AvgScoreRefreshTime) {
-				time.Sleep(time.Duration(s.cfg.AvgScoreRefreshTime))
-				continue
-			}
+				if time.Since(lastRefreshTime) < time.Duration(s.cfg.AvgScoreRefreshTime) {
+					time.Sleep(time.Duration(s.cfg.AvgScoreRefreshTime))
+					return
+				}
 
-			if err := s.db.RecomputeServicesScore(ctx); err != nil {
-				log.Error().Err(err).Msg("Не удалось пересчитать среднюю оценку услуг")
-			}
+				if err := s.db.RecomputeServicesScore(ctx); err != nil {
+					log.Error().Err(err).Msg("Не удалось пересчитать среднюю оценку услуг")
+				}
+			}()
 		}
 	}
 }

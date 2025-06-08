@@ -25,8 +25,6 @@ func TestSentimeterQueue(t *testing.T) {
 
 	queue := New(ctx, &cfg, db, sentimenter)
 
-	go queue.Run()
-
 	var wg sync.WaitGroup
 	wg.Add(2)
 	go func() {
