@@ -1,4 +1,4 @@
-package sentimeter_queue
+package sentimenterQueue
 
 import (
 	"context"

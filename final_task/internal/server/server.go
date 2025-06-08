@@ -8,7 +8,7 @@ import (
 	"pavlov061356/go-masters-homework/final_task/internal/config"
 	"pavlov061356/go-masters-homework/final_task/internal/models"
 	"pavlov061356/go-masters-homework/final_task/internal/sentimenter"
-	sentimeter_queue "pavlov061356/go-masters-homework/final_task/internal/sentimenter_queue"
+	sentimenterQueue "pavlov061356/go-masters-homework/final_task/internal/sentimenter_queue"
 	"pavlov061356/go-masters-homework/final_task/internal/storage"
 	"pavlov061356/go-masters-homework/final_task/internal/storage/postgres"
 	"time"
@@ -46,12 +46,17 @@ func New(ctx context.Context) *Server {
 	if err != nil {
 		log.Fatal().Err(err).Msg("Не удалось создать подключение к базе данных")
 	}
+	sentimenter, err := sentimenter.New(cfg.Sentimenter)
 
-	sentimeter := sentimeter_queue.New(ctx, &cfg.SentimenterQueue, db, sentimenter.New(cfg.Sentimenter))
+	if err != nil {
+		log.Fatal().Err(err).Msg("Не удалось создать коннектор к очереди")
+	}
+
+	sentimeterQueue := sentimenterQueue.New(ctx, &cfg.SentimenterQueue, db, sentimenter)
 
 	server := &Server{
 		db:         db,
-		sentimeter: sentimeter,
+		sentimeter: sentimeterQueue,
 		router:     router,
 		cfg:        cfg,
 		server: &http.Server{
