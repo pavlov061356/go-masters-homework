@@ -1,6 +1,8 @@
 module pavlov061356/go-masters-homework
 
-go 1.23.5
+go 1.24.0
+
+toolchain go1.24.3
 
 require github.com/rs/zerolog v1.34.0
 
@@ -79,7 +81,8 @@ require (
 	github.com/gorilla/schema v1.4.1
 	github.com/jackc/pgx v3.6.2+incompatible
 	github.com/mattn/go-colorable v0.1.13 // indirect
-	github.com/mattn/go-isatty v0.0.19 // indirect
+	github.com/mattn/go-isatty v0.0.20 // indirect
+	github.com/ollama/ollama v0.9.0
 	github.com/prometheus/client_golang v1.22.0
 	github.com/spf13/viper v1.20.1
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.37.0

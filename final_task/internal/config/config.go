@@ -33,9 +33,14 @@ type SentimenterQueue struct {
 	MaxDBQueueWait int `mapstructure:"max_db_queue_wait"`
 }
 
+// Sentimenter - структура настроек подключения к сервису расчёта настроения отзывов пользователей
 type Sentimenter struct {
-	Addr    string `mapstructure:"addr"`
-	Timeout int    `mapstructure:"timeout"`
+	// Addr - адрес сервиса расчёта настроения отзывов пользователей
+	Addr string `mapstructure:"addr"`
+	// Timeout - таймаут запроса к сервису расчёта настроения отзыва пользователя в секундах
+	Timeout int `mapstructure:"timeout"`
+	// Model - название модели нейросети для расчёта настроения отзыва пользователя
+	Model string `mapstructure:"model"`
 }
 
 func (c *Config) validate() error {
