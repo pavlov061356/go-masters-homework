@@ -37,26 +37,29 @@ type Server struct {
 	sentimeter Sentimenter
 }
 
-func New(ctx context.Context) *Server {
+func New(ctx context.Context) (*Server, error) {
 	router := chi.NewRouter()
 
 	cfg, err := config.Load("")
 	if err != nil {
-		log.Fatal().Err(err).Msg("Не удалось загрузить конфигурацию")
+		return nil, err
 	}
 
 	db, err := postgres.New(cfg.DBPath)
 	if err != nil {
-		log.Fatal().Err(err).Msg("Не удалось создать подключение к базе данных")
+		return nil, err
 	}
 
 	sentimenter, err := sentimenter.New(cfg.Sentimenter)
 
 	if err != nil {
-		log.Fatal().Err(err).Msg("Не удалось создать коннектор к очереди")
+		return nil, err
 	}
 
-	sentimeterQueue := sentimenterQueue.New(ctx, &cfg.SentimenterQueue, db, sentimenter)
+	sentimeterQueue, err := sentimenterQueue.New(ctx, &cfg.SentimenterQueue, db, sentimenter)
+	if sentimeterQueue == nil {
+		return nil, err
+	}
 
 	server := &Server{
 		db:         db,
@@ -74,7 +77,7 @@ func New(ctx context.Context) *Server {
 
 	server.registerRoutes()
 
-	return server
+	return server, nil
 }
 
 func (s *Server) registerRoutes() {

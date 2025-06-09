@@ -26,7 +26,11 @@ func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill, syscall.SIGTERM)
 	defer cancel()
 
-	server := server.New(ctx)
+	server, err := server.New(ctx)
+	if err != nil {
+		log.Err(err).Msg("Ошибка создания сервера")
+		return
+	}
 
 	if err := server.Run(ctx); err != nil {
 		log.Err(err).Msg("Ошибка запуска приложения")

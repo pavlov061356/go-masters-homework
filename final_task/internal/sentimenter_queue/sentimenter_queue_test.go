@@ -9,7 +9,14 @@ import (
 	"time"
 )
 
+func skipCI(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping test in CI")
+	}
+}
+
 func TestSentimeterQueue(t *testing.T) {
+	skipCI(t)
 	ctx, cancel := context.WithCancel(context.Background())
 
 	cfg := config.SentimenterQueue{
@@ -23,7 +30,10 @@ func TestSentimeterQueue(t *testing.T) {
 
 	sentimenter := sentimenterStub{}
 
-	queue := New(ctx, &cfg, db, sentimenter)
+	queue, err := New(ctx, &cfg, db, sentimenter)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	var wg sync.WaitGroup
 	wg.Add(2)

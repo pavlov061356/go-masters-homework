@@ -28,7 +28,7 @@ type SentimenterQueue struct {
 }
 
 // New создает очередь получения настроения отзыва и записи полученных данных в БД.
-func New(ctx context.Context, cfg *config.SentimenterQueue, db storage.Interface, sentimenter Sentimenter) *SentimenterQueue {
+func New(ctx context.Context, cfg *config.SentimenterQueue, db storage.Interface, sentimenter Sentimenter) (*SentimenterQueue, error) {
 	queue := SentimenterQueue{
 		cfg:         cfg,
 		db:          db,
@@ -38,14 +38,14 @@ func New(ctx context.Context, cfg *config.SentimenterQueue, db storage.Interface
 	reviews, err := queue.db.GetUnsentimentedReviews(ctx)
 	if err != nil {
 		log.Err(err).Msg("Ошибка при получении отзывов без настроения отзыва")
-		return nil
+		return nil, err
 	}
 
 	queue.reviewsQueue = reviews
 
 	go queue.run(ctx)
 
-	return &queue
+	return &queue, nil
 }
 
 // Run запускает очередь получения настроения отзыва и записи полученных данных в БД.
@@ -102,13 +102,16 @@ func (s *SentimenterQueue) run(ctx context.Context) {
 
 	go func() {
 		defer wg.Done()
-		select {
-		case <-ctx.Done():
-			return
-		case <-time.After(time.Minute * 5):
-			mux.Lock()
-			metrics.SentimenterQueueLength.Add(float64(len(outReviews)))
-			mux.Unlock()
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(time.Minute * 5):
+				mux.Lock()
+				metrics.SentimenterQueueLength.Add(float64(len(outReviews)))
+				mux.Unlock()
+			}
 		}
 	}()
 
