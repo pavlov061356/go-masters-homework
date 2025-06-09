@@ -9,14 +9,7 @@ import (
 	"time"
 )
 
-func skipCI(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping test in CI")
-	}
-}
-
 func TestSentimeterQueue(t *testing.T) {
-	skipCI(t)
 	ctx, cancel := context.WithCancel(context.Background())
 
 	cfg := config.SentimenterQueue{

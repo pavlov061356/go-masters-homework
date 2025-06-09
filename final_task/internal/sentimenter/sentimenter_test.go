@@ -7,7 +7,13 @@ import (
 	"testing"
 )
 
+func skipCI(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping test in CI")
+	}
+}
 func TestSentimenter_GetReviewSentiment(t *testing.T) {
+	skipCI(t)
 	type fields struct {
 		cfg config.Sentimenter
 	}
